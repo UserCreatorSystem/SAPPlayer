@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_pl.sapplayer.sapplayer" default="compile.module.pl.sapplayer.sapplayer">
+  <dirname property="module.pl.sapplayer.sapplayer.basedir" file="${ant.file.module_pl.sapplayer.sapplayer}"/>
+  
+  <property name="module.jdk.home.pl.sapplayer.sapplayer" value="${project.jdk.home}"/>
+  <property name="module.jdk.bin.pl.sapplayer.sapplayer" value="${project.jdk.bin}"/>
+  <property name="module.jdk.classpath.pl.sapplayer.sapplayer" value="${project.jdk.classpath}"/>
+  
+  <property name="compiler.args.pl.sapplayer.sapplayer" value="-encoding UTF-8 -source 8 -target 8 ${compiler.args}"/>
+  
+  <property name="pl.sapplayer.sapplayer.output.dir" value="${module.pl.sapplayer.sapplayer.basedir}/../../out/production/pl.sapplayer.SAPPlayer"/>
+  <property name="pl.sapplayer.sapplayer.testoutput.dir" value="${module.pl.sapplayer.sapplayer.basedir}/../../out/test/pl.sapplayer.SAPPlayer"/>
+  
+  <path id="pl.sapplayer.sapplayer.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="pl.sapplayer.sapplayer.module.production.classpath">
+    <path refid="${module.jdk.classpath.pl.sapplayer.sapplayer}"/>
+  </path>
+  
+  <path id="pl.sapplayer.sapplayer.runtime.production.module.classpath">
+    <pathelement location="${pl.sapplayer.sapplayer.output.dir}"/>
+  </path>
+  
+  <path id="pl.sapplayer.sapplayer.module.classpath">
+    <path refid="${module.jdk.classpath.pl.sapplayer.sapplayer}"/>
+    <pathelement location="${pl.sapplayer.sapplayer.output.dir}"/>
+  </path>
+  
+  <path id="pl.sapplayer.sapplayer.runtime.module.classpath">
+    <pathelement location="${pl.sapplayer.sapplayer.testoutput.dir}"/>
+    <pathelement location="${pl.sapplayer.sapplayer.output.dir}"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.pl.sapplayer.sapplayer">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.pl.sapplayer.sapplayer">
+    <patternset refid="excluded.from.module.pl.sapplayer.sapplayer"/>
+  </patternset>
+  
+  
+  <target name="compile.module.pl.sapplayer.sapplayer" depends="compile.module.pl.sapplayer.sapplayer.production,compile.module.pl.sapplayer.sapplayer.tests" description="Compile module pl.sapplayer.SAPPlayer"/>
+  
+  <target name="compile.module.pl.sapplayer.sapplayer.production" depends="register.custom.compilers" description="Compile module pl.sapplayer.SAPPlayer; production classes"/>
+  
+  <target name="compile.module.pl.sapplayer.sapplayer.tests" depends="register.custom.compilers,compile.module.pl.sapplayer.sapplayer.production" description="compile module pl.sapplayer.SAPPlayer; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.pl.sapplayer.sapplayer" description="cleanup module">
+    <delete dir="${pl.sapplayer.sapplayer.output.dir}"/>
+    <delete dir="${pl.sapplayer.sapplayer.testoutput.dir}"/>
+  </target>
+</project>

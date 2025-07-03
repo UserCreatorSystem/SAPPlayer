@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_pl.player.simplesapplayer" default="compile.module.pl.player.simplesapplayer">
+  <dirname property="module.pl.player.simplesapplayer.basedir" file="${ant.file.module_pl.player.simplesapplayer}"/>
+  
+  <property name="module.jdk.home.pl.player.simplesapplayer" value="${project.jdk.home}"/>
+  <property name="module.jdk.bin.pl.player.simplesapplayer" value="${project.jdk.bin}"/>
+  <property name="module.jdk.classpath.pl.player.simplesapplayer" value="${project.jdk.classpath}"/>
+  
+  <property name="compiler.args.pl.player.simplesapplayer" value="-encoding UTF-8 -source 8 -target 8 ${compiler.args}"/>
+  
+  <property name="pl.player.simplesapplayer.output.dir" value="${module.pl.player.simplesapplayer.basedir}/../../out/production/pl.player.SimpleSAPPlayer"/>
+  <property name="pl.player.simplesapplayer.testoutput.dir" value="${module.pl.player.simplesapplayer.basedir}/../../out/test/pl.player.SimpleSAPPlayer"/>
+  
+  <path id="pl.player.simplesapplayer.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="pl.player.simplesapplayer.module.production.classpath">
+    <path refid="${module.jdk.classpath.pl.player.simplesapplayer}"/>
+  </path>
+  
+  <path id="pl.player.simplesapplayer.runtime.production.module.classpath">
+    <pathelement location="${pl.player.simplesapplayer.output.dir}"/>
+  </path>
+  
+  <path id="pl.player.simplesapplayer.module.classpath">
+    <path refid="${module.jdk.classpath.pl.player.simplesapplayer}"/>
+    <pathelement location="${pl.player.simplesapplayer.output.dir}"/>
+  </path>
+  
+  <path id="pl.player.simplesapplayer.runtime.module.classpath">
+    <pathelement location="${pl.player.simplesapplayer.testoutput.dir}"/>
+    <pathelement location="${pl.player.simplesapplayer.output.dir}"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.pl.player.simplesapplayer">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.pl.player.simplesapplayer">
+    <patternset refid="excluded.from.module.pl.player.simplesapplayer"/>
+  </patternset>
+  
+  
+  <target name="compile.module.pl.player.simplesapplayer" depends="compile.module.pl.player.simplesapplayer.production,compile.module.pl.player.simplesapplayer.tests" description="Compile module pl.player.SimpleSAPPlayer"/>
+  
+  <target name="compile.module.pl.player.simplesapplayer.production" depends="register.custom.compilers" description="Compile module pl.player.SimpleSAPPlayer; production classes"/>
+  
+  <target name="compile.module.pl.player.simplesapplayer.tests" depends="register.custom.compilers,compile.module.pl.player.simplesapplayer.production" description="compile module pl.player.SimpleSAPPlayer; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.pl.player.simplesapplayer" description="cleanup module">
+    <delete dir="${pl.player.simplesapplayer.output.dir}"/>
+    <delete dir="${pl.player.simplesapplayer.testoutput.dir}"/>
+  </target>
+</project>
