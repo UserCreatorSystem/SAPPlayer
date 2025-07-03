@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation files('lib/asap.jar') // [3] Deklaracja zależności
+    testImplementation 'junit:junit:4.12'
+}
+
+application {
+    mainClassName = 'SimpleSAPPlayer'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'SimpleSAPPlayer'
+    }
+    from sourceSets.main.output.classesDirs
+    from {
+        configurations.runtime.get().map {
+            if (it.isDirectory()) it else zipTree(it) // [4] Wypakuj JAR
+        }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

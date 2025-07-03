@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="pl.sapplayer.SAPPlayer.main:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/pl_sapplayer_SAPPlayer_main_jar</output-path>
+    <root id="archive" name="pl.sapplayer.SAPPlayer.main.jar">
+      <element id="module-output" name="pl.sapplayer.SAPPlayer.main" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/libs/asap.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

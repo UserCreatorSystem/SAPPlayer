@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="module_pl.player.simplesapplayer.main" default="compile.module.pl.player.simplesapplayer.main">
+  <dirname property="module.pl.player.simplesapplayer.main.basedir" file="${ant.file.module_pl.player.simplesapplayer.main}"/>
+  
+  <property name="module.jdk.home.pl.player.simplesapplayer.main" value="${project.jdk.home}"/>
+  <property name="module.jdk.bin.pl.player.simplesapplayer.main" value="${project.jdk.bin}"/>
+  <property name="module.jdk.classpath.pl.player.simplesapplayer.main" value="${project.jdk.classpath}"/>
+  
+  <property name="compiler.args.pl.player.simplesapplayer.main" value="-encoding UTF-8 -source 8 -target 1.8 ${compiler.args}"/>
+  
+  <property name="pl.player.simplesapplayer.main.output.dir" value="${module.pl.player.simplesapplayer.main.basedir}/../../out/production/classes"/>
+  <property name="pl.player.simplesapplayer.main.testoutput.dir" value="${module.pl.player.simplesapplayer.main.basedir}/../../out/production/classes"/>
+  
+  <path id="pl.player.simplesapplayer.main.module.bootclasspath">
+    <!-- Paths to be included in compilation bootclasspath -->
+  </path>
+  
+  <path id="pl.player.simplesapplayer.main.module.production.classpath">
+    <path refid="${module.jdk.classpath.pl.player.simplesapplayer.main}"/>
+    <pathelement location="${basedir}/lib/asap.jar"/>
+  </path>
+  
+  <path id="pl.player.simplesapplayer.main.runtime.production.module.classpath">
+    <pathelement location="${pl.player.simplesapplayer.main.output.dir}"/>
+    <pathelement location="${basedir}/lib/asap.jar"/>
+  </path>
+  
+  <path id="pl.player.simplesapplayer.main.module.classpath">
+    <path refid="${module.jdk.classpath.pl.player.simplesapplayer.main}"/>
+    <pathelement location="${pl.player.simplesapplayer.main.output.dir}"/>
+    <pathelement location="${basedir}/lib/asap.jar"/>
+  </path>
+  
+  <path id="pl.player.simplesapplayer.main.runtime.module.classpath">
+    <pathelement location="${pl.player.simplesapplayer.main.output.dir}"/>
+    <pathelement location="${basedir}/lib/asap.jar"/>
+  </path>
+  
+  
+  <patternset id="excluded.from.module.pl.player.simplesapplayer.main">
+    <patternset refid="ignored.files"/>
+  </patternset>
+  
+  <patternset id="excluded.from.compilation.pl.player.simplesapplayer.main">
+    <patternset refid="excluded.from.module.pl.player.simplesapplayer.main"/>
+  </patternset>
+  
+  <path id="pl.player.simplesapplayer.main.module.sourcepath">
+    <dirset dir="${module.pl.player.simplesapplayer.main.basedir}/../../src/main">
+      <include name="java"/>
+      <include name="resources"/>
+    </dirset>
+  </path>
+  
+  
+  <target name="compile.module.pl.player.simplesapplayer.main" depends="compile.module.pl.player.simplesapplayer.main.production,compile.module.pl.player.simplesapplayer.main.tests" description="Compile module pl.player.SimpleSAPPlayer.main"/>
+  
+  <target name="compile.module.pl.player.simplesapplayer.main.production" depends="register.custom.compilers" description="Compile module pl.player.SimpleSAPPlayer.main; production classes">
+    <mkdir dir="${pl.player.simplesapplayer.main.output.dir}"/>
+    <javac2 destdir="${pl.player.simplesapplayer.main.output.dir}" debug="${compiler.debug}" nowarn="${compiler.generate.no.warnings}" memorymaximumsize="${compiler.max.memory}" fork="true" executable="${module.jdk.bin.pl.player.simplesapplayer.main}/javac">
+      <compilerarg line="${compiler.args.pl.player.simplesapplayer.main}"/>
+      <bootclasspath refid="pl.player.simplesapplayer.main.module.bootclasspath"/>
+      <classpath refid="pl.player.simplesapplayer.main.module.production.classpath"/>
+      <src refid="pl.player.simplesapplayer.main.module.sourcepath"/>
+      <patternset refid="excluded.from.compilation.pl.player.simplesapplayer.main"/>
+    </javac2>
+    
+    <copy todir="${pl.player.simplesapplayer.main.output.dir}">
+      <fileset dir="${module.pl.player.simplesapplayer.main.basedir}/../../src/main/java">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+      <fileset dir="${module.pl.player.simplesapplayer.main.basedir}/../../src/main/resources">
+        <patternset refid="compiler.resources"/>
+        <type type="file"/>
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="compile.module.pl.player.simplesapplayer.main.tests" depends="register.custom.compilers,compile.module.pl.player.simplesapplayer.main.production" description="compile module pl.player.SimpleSAPPlayer.main; test classes" unless="skip.tests"/>
+  
+  <target name="clean.module.pl.player.simplesapplayer.main" description="cleanup module">
+    <delete dir="${pl.player.simplesapplayer.main.output.dir}"/>
+    <delete dir="${pl.player.simplesapplayer.main.testoutput.dir}"/>
+  </target>
+</project>
