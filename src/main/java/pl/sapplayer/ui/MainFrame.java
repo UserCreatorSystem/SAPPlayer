@@ -14,9 +14,9 @@ public class MainFrame extends JFrame {
     private ControlPanel controlPanel;
 
     public MainFrame() {
-        setTitle("Nowy SAP Player");
+        setTitle("Atari SAP Player");
         // Zwiększony rozmiar, aby pomieścić nowe kontrolki
-        setSize(850, 750); // Dostosuj w miarę potrzeby
+        setSize(550, 750); // Dostosuj w miarę potrzeby
         setMinimumSize(new Dimension(700, 650));
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -56,7 +56,7 @@ public class MainFrame extends JFrame {
         controlPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
         add(controlPanel, BorderLayout.SOUTH);
 
-        visualizerRight.setVisible(false); // Domyślnie ukryj prawy wizualizator (dla mono)
+        //visualizerRight.setVisible(false); // Domyślnie ukryj prawy wizualizator (dla mono)
     }
 
     // --- Metody dostępu ---

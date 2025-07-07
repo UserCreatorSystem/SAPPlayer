@@ -9,13 +9,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b1ab4b06-56ef-45bb-bac3-77e7f9aa8889" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/IntelliJ.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/SimpleSAPPlayer/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/SimpleSAPPlayer/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="b1ab4b06-56ef-45bb-bac3-77e7f9aa8889" name="Default Changelist" comment="Pierwsza działająca wersja. Poprawiony pasek postępu, problemy z wizualiazacją" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -225,7 +219,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="master" />
+        <entry key="$PROJECT_DIR$" value="0.01" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -247,6 +241,9 @@
         <option value="$PROJECT_DIR$/src/main/java/META-INF/MANIFEST.MF" />
       </list>
     </option>
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectFrameBounds">
     <option name="x" value="1732" />
@@ -308,16 +305,18 @@
   "keyToString": {
     "Application.PlayerApp.executor": "Run",
     "Gradle.Build IntelliJ.executor": "Run",
+    "Gradle.IntelliJ [:pl.sapplayer.PlayerApp.main()].executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "master",
+    "git-widget-placeholder": "0.02",
     "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings"
   }
 }]]></component>
   <component name="RunManager">
     <configuration name="PlayerApp" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="pl.sapplayer.PlayerApp" />
+      <module name="SAPPlayer.main" />
       <extension name="coverage">
         <pattern>
           <option name="PATTERN" value="pl.sapplayer.*" />
@@ -352,7 +351,23 @@
       <option name="project" value="LOCAL" />
       <updated>1751552762870</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Pierwsza działająca wersja. Problemy z paskiem postępu, problemy z wizualiazacją">
+      <option name="closed" value="true" />
+      <created>1751903806176</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1751903806176</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Pierwsza działająca wersja. Poprawiony pasek postępu, problemy z wizualiazacją">
+      <option name="closed" value="true" />
+      <created>1751911957910</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1751911957910</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TodoView">
@@ -403,7 +418,19 @@
       <map>
         <entry key="MAIN">
           <value>
-            <State />
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="0.02" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
           </value>
         </entry>
       </map>
@@ -411,7 +438,10 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="Initial commit" />
+    <MESSAGE value="Pierwsza działająca wersja. Problemy z paskiem postępu, problemy z wizualiazacją" />
+    <MESSAGE value="Poprawiony pasek postępu, nowa wizualiazacja" />
+    <MESSAGE value="Pierwsza działająca wersja. Poprawiony pasek postępu, problemy z wizualiazacją" />
+    <option name="LAST_COMMIT_MESSAGE" value="Pierwsza działająca wersja. Poprawiony pasek postępu, problemy z wizualiazacją" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/src/main/java/pl/sapplayer/visuals/AudioVisualizerPanel.java">

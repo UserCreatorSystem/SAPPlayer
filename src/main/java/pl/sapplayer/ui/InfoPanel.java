@@ -25,11 +25,11 @@ public class InfoPanel extends JPanel {
         timeLabel = new JLabel("Czas: 00:00");
         formatLabel = new JLabel("Format: -");
 
-        Font infoFont = new Font("Monospaced", Font.PLAIN, 12);
+      //  Font infoFont = new Font("Monospaced", Font.PLAIN, 12);
 
         // Dodajemy etykiety do panelu
         for (JLabel label : new JLabel[]{filePathLabel, titleLabel, authorLabel, dateLabel, songLabel, timeLabel, formatLabel}) {
-            label.setFont(infoFont);
+        //    label.setFont(infoFont);
             label.setAlignmentX(Component.LEFT_ALIGNMENT); // Wyrównanie do lewej
             add(label);
         }

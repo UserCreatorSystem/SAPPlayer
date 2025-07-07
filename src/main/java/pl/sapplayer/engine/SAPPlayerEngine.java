@@ -5,7 +5,9 @@ import net.sf.asap.ASAPInfo;
 
 import javax.sound.sampled.*;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger; // Potrzebne do bytesWritten w seek, jeśli jest używane
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class SAPPlayerEngine {
 
@@ -13,25 +15,41 @@ public class SAPPlayerEngine {
     private final ASAPInfo info;
     private SourceDataLine line;
     private Thread playbackThread;
-    private volatile boolean isPaused = false;
-    private volatile boolean playing = false;
-    private int currentSong = 0;
-    private float currentVolume = 0.7f; // Domyślna głośność
-    private boolean loopEnabled = false; // Dodana funkcja powtarzania
+    private final AtomicBoolean isPaused = new AtomicBoolean(false);
+    private final AtomicBoolean playing = new AtomicBoolean(false);
+    private final AtomicInteger currentSong = new AtomicInteger(0);
+    private volatile float currentVolume = 0.7f;
+    private volatile boolean loopEnabled = false;
+
+    // Nowe pola dla lepszego zarządzania czasem i pozycją
+    private final AtomicInteger currentTimeSeconds = new AtomicInteger(0);
+    private final AtomicBoolean seekRequested = new AtomicBoolean(false);
+    private final AtomicInteger seekTargetSeconds = new AtomicInteger(0);
+    private final ReentrantLock seekLock = new ReentrantLock();
+
+    // Bufor dla wizualizacji
+    private volatile byte[] visualizationBuffer;
+    private final Object visualizationLock = new Object();
+
+    // Parametry audio
+    private static final int SAMPLE_RATE = 44100;
+    private static final int BITS_PER_SAMPLE = 16;
+    private static final int BUFFER_SIZE = 2048;
 
     public interface PlaybackListener {
-        void onTimeUpdate(int secondsPlayed, int totalDuration); // Uaktualniona, aby przekazywać całkowity czas
+        void onTimeUpdate(int secondsPlayed, int totalDuration);
         void onSongEnd();
         void onPlaybackError(String message);
         void onPlaybackStarted();
     }
 
-    private PlaybackListener listener;
+    private volatile PlaybackListener listener;
 
     public interface AudioDataListener {
         void onAudioData(byte[] buffer);
     }
-    private AudioDataListener audioDataListener;
+
+    private volatile AudioDataListener audioDataListener;
 
     public SAPPlayerEngine(ASAP asap, ASAPInfo info) {
         this.asap = asap;
@@ -47,166 +65,195 @@ public class SAPPlayerEngine {
     }
 
     public void play(int song) throws Exception {
-        stop(); // Upewnij się, że poprzednie odtwarzanie jest zatrzymane
-System.out.println("Wywołano metodę play()");
-        currentSong = song;
-        playing = true;
-        isPaused = false;
+        stop(); // Zatrzymaj poprzednie odtwarzanie
 
         System.out.println("▶️ Odtwarzam utwór " + song);
-        System.out.println("🔊 Liczba kanałów audio: " + info.getChannels());
+
+        currentSong.set(song);
+        playing.set(true);
+        isPaused.set(false);
+        currentTimeSeconds.set(0);
+        seekRequested.set(false);
 
         int durationMs = info.getDuration(song);
-        System.out.println("DEBUG: Długość utworu " + song + ": " + durationMs + " ms");
+        System.out.println("Długość utworu: " + durationMs + " ms");
 
-        // Oryginalne wywołanie asap.playSong, które działało
         try {
             asap.playSong(song, durationMs);
-            System.out.println("DEBUG: Po asap.playSong() - Wywołanie zakończone.");
         } catch (Exception e) {
-            System.err.println("DEBUG: Wyjątek podczas asap.playSong(): " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Błąd podczas asap.playSong(): " + e.getMessage());
             throw e;
         }
 
         int audioChannels = info.getChannels();
-        AudioFormat format = new AudioFormat(44100, 16, audioChannels, true, false);
-        System.out.println("🎧 AudioFormat: " + audioChannels + " kanał(y), 44100 Hz, 16-bit");
+        AudioFormat format = new AudioFormat(SAMPLE_RATE, BITS_PER_SAMPLE, audioChannels, true, false);
 
         try {
             line = AudioSystem.getSourceDataLine(format);
             line.open(format);
             line.start();
-
-            setVolume(currentVolume); // Ustaw głośność po otwarciu linii
+            setVolume(currentVolume);
 
             if (listener != null) {
                 listener.onPlaybackStarted();
             }
 
-            playbackThread = new Thread(() -> {
-                byte[] buffer = new byte[2048]; // Rozmiar bufora z Twojego starego kodu
-                long startTime = System.currentTimeMillis();
-                long totalBytesGenerated = 0; // Do dokładniejszego obliczania czasu
-
-                try {
-                    System.out.println("DEBUG: Wątek odtwarzania - start pętli.");
-                    while (playing) {
-                        if (!isPaused) {
-                            int frameSize = 2 * info.getChannels(); // 2 bajty na próbkę (16-bit) * liczba kanałów
-                            int framesToGenerate = buffer.length / frameSize; // Liczba ramek, które zmieszczą się w buforze
-
-                            // *** KLUCZOWA POPRAWKA: PRZYWRÓCENIE ORYGINALNEGO WYWOŁANIA asap.generate() ***
-                            int bytesGenerated = asap.generate(buffer, framesToGenerate, 1);
-                            System.out.println("DEBUG: asap.generate() zwróciło " + bytesGenerated + " bajtów.");
-
-                            if (bytesGenerated > 0) {
-                                line.write(buffer, 0, bytesGenerated);
-                                totalBytesGenerated += bytesGenerated;
-
-                                if (audioDataListener != null) {
-                                    audioDataListener.onAudioData(Arrays.copyOf(buffer, bytesGenerated));
-                                }
-
-                                if (listener != null) {
-                                    // Obliczenie czasu na podstawie wygenerowanych bajtów
-                                    int currentSeconds = (int) (totalBytesGenerated / (format.getFrameRate() * format.getFrameSize()));
-                                    int totalDurationSeconds = info.getDuration(currentSong) / 1000;
-                                    listener.onTimeUpdate(currentSeconds, totalDurationSeconds);
-                                }
-                            } else {
-                                System.out.println("DEBUG: asap.generate() zwróciło <= 0. Koniec utworu lub brak danych.");
-                                if (listener != null) listener.onSongEnd();
-                                if (loopEnabled) {
-                                    System.out.println("🔄 Powtarzam utwór...");
-                                    asap.playSong(currentSong, info.getDuration(currentSong)); // Resetuj utwór
-                                    totalBytesGenerated = 0; // Resetuj licznik bajtów
-                                    startTime = System.currentTimeMillis(); // Resetuj czas startu
-                                } else {
-                                    playing = false; // Zakończ odtwarzanie
-                                }
-                            }
-                        } else {
-                            try {
-                                Thread.sleep(100); // Sprawdź, czy 100ms jest OK, oryginalnie było 10ms
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
-                                playing = false;
-                            }
-                        }
-                    }
-                    System.out.println("DEBUG: Wątek odtwarzania - pętla zakończona.");
-                } catch (LineUnavailableException lue) {
-                    System.err.println("❗ Błąd w wątku odtwarzania (LineUnavailableException): " + lue.getMessage());
-                    if (listener != null) listener.onPlaybackError("Błąd odtwarzania (Line): " + lue.getMessage());
-                    playing = false;
-                } catch (IllegalArgumentException iae) {
-                    System.err.println("❗ Błąd w wątku odtwarzania (IllegalArgumentException, np. z line.write): " + iae.getMessage());
-                    iae.printStackTrace();
-                    if (listener != null) listener.onPlaybackError("Błąd odtwarzania (Arg): " + iae.getMessage());
-                    playing = false;
-                } catch (Exception e) {
-                    System.err.println("❗ Nieoczekiwany błąd w wątku odtwarzania: " + e.getMessage());
-                    e.printStackTrace();
-                    if (listener != null) listener.onPlaybackError("Nieoczekiwany błąd odtwarzania: " + e.getMessage());
-                    playing = false;
-                } finally {
-                    System.out.println("DEBUG: Wątek odtwarzania - blok finally.");
-                    cleanup();
-                }
-            }, "PlaybackThread");
+            playbackThread = new Thread(this::playbackLoop, "SAPPlaybackThread");
             playbackThread.start();
 
-        } catch (LineUnavailableException lue) {
-            System.err.println("❗ Błąd podczas otwierania linii audio: " + lue.getMessage());
-            if (listener != null) listener.onPlaybackError("Błąd inicjalizacji audio: " + lue.getMessage());
-            playing = false;
+        } catch (LineUnavailableException e) {
+            System.err.println("Błąd podczas otwierania linii audio: " + e.getMessage());
+            if (listener != null) listener.onPlaybackError("Błąd inicjalizacji audio: " + e.getMessage());
+            playing.set(false);
             cleanup();
+            throw e;
+        }
+    }
+
+    private void playbackLoop() {
+        byte[] buffer = new byte[BUFFER_SIZE];
+        long totalBytesGenerated = 0;
+        int frameSize = (BITS_PER_SAMPLE / 8) * info.getChannels();
+
+        try {
+            while (playing.get()) {
+                // Sprawdź czy jest żądanie przewijania
+                if (seekRequested.get()) {
+                    handleSeek();
+                    totalBytesGenerated = (long) currentTimeSeconds.get() * SAMPLE_RATE * frameSize;
+                    continue;
+                }
+
+                if (!isPaused.get()) {
+                    int framesToGenerate = buffer.length / frameSize;
+                    int bytesGenerated = asap.generate(buffer, framesToGenerate, 1);
+
+                    if (bytesGenerated > 0) {
+                        line.write(buffer, 0, bytesGenerated);
+                        totalBytesGenerated += bytesGenerated;
+
+                        // Aktualizuj wizualizację
+                        updateVisualization(buffer, bytesGenerated);
+
+                        // Oblicz aktualny czas
+                        int newTimeSeconds = (int) (totalBytesGenerated / (SAMPLE_RATE * frameSize));
+                        if (newTimeSeconds != currentTimeSeconds.get()) {
+                            currentTimeSeconds.set(newTimeSeconds);
+                            if (listener != null) {
+                                int totalDurationSeconds = info.getDuration(currentSong.get()) / 1000;
+                                listener.onTimeUpdate(newTimeSeconds, totalDurationSeconds);
+                            }
+                        }
+                    } else {
+                        // Koniec utworu
+                        if (listener != null) listener.onSongEnd();
+                        if (loopEnabled) {
+                            System.out.println("🔄 Powtarzam utwór...");
+                            asap.playSong(currentSong.get(), info.getDuration(currentSong.get()));
+                            totalBytesGenerated = 0;
+                            currentTimeSeconds.set(0);
+                        } else {
+                            playing.set(false);
+                        }
+                    }
+                } else {
+                    // Tryb pauzy
+                    Thread.sleep(50);
+                }
+            }
         } catch (Exception e) {
-            System.err.println("❗ Nieoczekiwany błąd w play(): " + e.getMessage());
-            e.printStackTrace();
-            if (listener != null) listener.onPlaybackError("Nieoczekiwany błąd play(): " + e.getMessage());
-            playing = false;
+            System.err.println("Błąd w wątku odtwarzania: " + e.getMessage());
+            if (listener != null) listener.onPlaybackError("Błąd odtwarzania: " + e.getMessage());
+        } finally {
             cleanup();
         }
     }
 
+    private void handleSeek() {
+        seekLock.lock();
+        try {
+            if (!seekRequested.get()) return;
+
+            int targetSeconds = seekTargetSeconds.get();
+            System.out.println("Przewijam do: " + targetSeconds + "s");
+
+            // Zrestartuj utwór
+            try {
+                asap.playSong(currentSong.get(), info.getDuration(currentSong.get()));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            // Szybkie przewijanie przez generowanie danych bez odtwarzania
+            if (targetSeconds > 0) {
+                byte[] tempBuffer = new byte[BUFFER_SIZE];
+                int frameSize = (BITS_PER_SAMPLE / 8) * info.getChannels();
+                long targetBytes = (long) targetSeconds * SAMPLE_RATE * frameSize;
+                long bytesGenerated = 0;
+
+                while (bytesGenerated < targetBytes) {
+                    int framesToGenerate = Math.min(tempBuffer.length / frameSize,
+                            (int)((targetBytes - bytesGenerated) / frameSize));
+                    int generated = asap.generate(tempBuffer, framesToGenerate, 1);
+                    if (generated <= 0) break;
+                    bytesGenerated += generated;
+                }
+            }
+
+            currentTimeSeconds.set(targetSeconds);
+            seekRequested.set(false);
+
+        } finally {
+            seekLock.unlock();
+        }
+    }
+
+    private void updateVisualization(byte[] buffer, int bytesGenerated) {
+        if (audioDataListener != null) {
+            // Skopiuj dane dla wizualizacji w thread-safe sposób
+            synchronized (visualizationLock) {
+                visualizationBuffer = Arrays.copyOf(buffer, bytesGenerated);
+            }
+
+            // Wyślij dane do wizualizacji (może być wywołane z innego wątku)
+            audioDataListener.onAudioData(visualizationBuffer);
+        }
+    }
+
     public void pause() {
-        if (playing) {
-            isPaused = true;
+        if (playing.get()) {
+            isPaused.set(true);
             System.out.println("⏸️ Pauza");
         }
     }
 
     public void resume() {
-        if (playing && isPaused) {
-            isPaused = false;
+        if (playing.get() && isPaused.get()) {
+            isPaused.set(false);
             System.out.println("▶️ Wznawiam");
         }
     }
 
     public void stop() {
-        boolean wasPlaying = playing;
-        playing = false;
-        isPaused = false;
+        boolean wasPlaying = playing.getAndSet(false);
+        isPaused.set(false);
+        seekRequested.set(false);
 
         if (playbackThread != null && playbackThread.isAlive()) {
             try {
-                playbackThread.join(500);
-                System.out.println("DEBUG: Oczekiwanie na wątek odtwarzania zakończone.");
+                playbackThread.join(1000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                System.err.println("DEBUG: Oczekiwanie na wątek odtwarzania przerwane.");
+                playbackThread.interrupt();
             }
         }
-        if (wasPlaying && line != null) { // Cleanup tylko jeśli faktycznie coś grało i linia nie jest jeszcze zamknięta
+
+        if (wasPlaying) {
             cleanup();
-        } else if (line != null) { // Jeśli linia jest, ale nie było aktywnego odtwarzania, też ją zamknij
-            cleanup();
-        } else {
-            System.out.println("DEBUG: Cleanup pominięte w stop() - linia już zamknięta lub nieaktywna.");
         }
-        System.out.println("🛑 Zatrzymuję odtwarzanie...");
+
+        currentTimeSeconds.set(0);
+        System.out.println("🛑 Zatrzymano odtwarzanie");
     }
 
     private void cleanup() {
@@ -216,79 +263,37 @@ System.out.println("Wywołano metodę play()");
                 line.stop();
                 line.close();
             } catch (Exception e) {
-                System.err.println("❗ Błąd przy zamykaniu linii audio: " + e.getMessage());
+                System.err.println("Błąd przy zamykaniu linii audio: " + e.getMessage());
             } finally {
                 line = null;
-                System.out.println("✅ Linia audio zamknięta");
             }
         }
         playbackThread = null;
     }
 
     public void setVolume(float volume) {
+        currentVolume = Math.max(0.0f, Math.min(1.0f, volume));
+
         if (line != null && line.isOpen() && line.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
             FloatControl gainControl = (FloatControl) line.getControl(FloatControl.Type.MASTER_GAIN);
-            float dB = (float) (Math.log10(volume) * 20.0);
+            float dB = (float) (Math.log10(currentVolume) * 20.0);
             dB = Math.max(gainControl.getMinimum(), Math.min(gainControl.getMaximum(), dB));
             gainControl.setValue(dB);
-            currentVolume = volume;
-            System.out.println("Głośność ustawiona na: " + (int)(volume * 100) + "% (dB: " + dB + ")");
-        } else {
-            currentVolume = volume;
         }
     }
 
     /**
-     * Przewija utwór do danej pozycji w sekundach.
-     * Implementacja symuluje przewijanie przez ponowne uruchomienie utworu i generowanie danych do danej pozycji.
-     * @param seconds Nowa pozycja w sekundach.
+     * Ulepszona metoda seek - nie zatrzymuje odtwarzania, tylko ustawia flagę
      */
     public void seek(int seconds) {
-        System.out.println("Wywołano metodę seek()");
-        if (asap != null) {
-            boolean wasPlayingBeforeSeek = playing;
-            stop(); // Zatrzymuje bieżące odtwarzanie
-
+        if (asap != null && seconds >= 0) {
+            seekLock.lock();
             try {
-                asap.playSong(currentSong, info.getDuration(currentSong)); // Ponownie inicjuje utwór
-
-                int sampleRate = 44100;
-                int sampleSizeInBytes = 16 / 8; // 16-bit to 2 bajty
-                int channels = info.getChannels();
-                int frameSize = sampleSizeInBytes * channels;
-
-                long bytesToSeek = (long) seconds * sampleRate * frameSize;
-
-                byte[] tempBuffer = new byte[8192]; // Bufor tymczasowy do przewijania
-                long bytesGenerated = 0;
-
-                System.out.println("Przewijam... do " + seconds + "s (" + bytesToSeek + " bajtów)");
-
-                // Generuj dane audio, aby "przewinąć" do żądanej pozycji
-                while (bytesGenerated < bytesToSeek) {
-                    int framesToGenerate = tempBuffer.length / frameSize;
-                    int read = asap.generate(tempBuffer, framesToGenerate,1); // Poprawne wywołanie generate
-                    if (read <= 0) {
-                        System.out.println("DEBUG: Przewijanie napotkało koniec utworu. Odczytano: " + read + " bajtów.");
-                        break;
-                    }
-                    bytesGenerated += read;
-                }
-                System.out.println("Przewinięto " + bytesGenerated + " bajtów.");
-
-                if (wasPlayingBeforeSeek) {
-                    play(currentSong); // Wznów odtwarzanie od nowej pozycji
-                } else {
-                    if (listener != null) {
-                        listener.onTimeUpdate(seconds, info.getDuration(currentSong) / 1000); // Zaktualizuj UI
-                    }
-                }
-                System.out.println("Przewinięto do: " + seconds + "s");
-
-            } catch (Exception e) {
-                System.err.println("Błąd podczas przewijania: " + e.getMessage());
-                e.printStackTrace();
-                if (listener != null) listener.onPlaybackError("Błąd przewijania: " + e.getMessage());
+                seekTargetSeconds.set(seconds);
+                seekRequested.set(true);
+                System.out.println("Żądanie przewijania do: " + seconds + "s");
+            } finally {
+                seekLock.unlock();
             }
         }
     }
@@ -298,27 +303,12 @@ System.out.println("Wywołano metodę play()");
         System.out.println("Powtarzanie: " + (enabled ? "Włączone" : "Wyłączone"));
     }
 
-    public int getCurrentSong() {
-        return currentSong;
-    }
-
-    public int getTotalSongs() {
-        return info.getSongs();
-    }
-
-    public boolean isPaused() {
-        return isPaused;
-    }
-
-    public int getAudioChannels() {
-        return info.getChannels();
-    }
-
-    public boolean isPlaying() {
-        return playing;
-    }
-
-    public int getTotalDuration(int song) {
-        return info.getDuration(song);
-    }
+    // Gettery
+    public int getCurrentSong() { return currentSong.get(); }
+    public int getTotalSongs() { return info.getSongs(); }
+    public boolean isPaused() { return isPaused.get(); }
+    public boolean isPlaying() { return playing.get(); }
+    public int getAudioChannels() { return info.getChannels(); }
+    public int getTotalDuration(int song) { return info.getDuration(song); }
+    public int getCurrentTimeSeconds() { return currentTimeSeconds.get(); }
 }

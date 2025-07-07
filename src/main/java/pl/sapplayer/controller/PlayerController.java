@@ -1,4 +1,3 @@
-// pl.sapplayer.controller.PlayerController.java
 package pl.sapplayer.controller;
 
 import net.sf.asap.ASAP;
@@ -10,10 +9,13 @@ import pl.sapplayer.utils.SAPFileReader;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener; // Dodaj ten import
+import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.File;
 import java.awt.image.BufferedImage;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class PlayerController {
 
@@ -21,10 +23,21 @@ public class PlayerController {
     private SAPPlayerEngine playerEngine;
     private SAPFileReader sapReader;
     private File currentSAPFile;
-    private int currentSongIndex = 0;
-    // Usunięto: private boolean isAdjustingProgressBarProgrammatically = false; // TA FLAGA JEST USUNIĘTA
-    private ChangeListener progressBarChangeListener; // Nowa zmienna do przechowywania instancji listenera
-    private int lastKnownSliderValue = 0; // Dodaj to pole do klasy PlayerController
+    private final AtomicInteger currentSongIndex = new AtomicInteger(0);
+
+    // Ulepszone zarządzanie stanem paska postępu
+    private final AtomicBoolean isUserDragging = new AtomicBoolean(false);
+    private final AtomicInteger lastEngineTimeUpdate = new AtomicInteger(0);
+    private ChangeListener progressBarChangeListener;
+
+    // Debouncing dla wizualizacji
+    private final AtomicBoolean visualizationUpdateInProgress = new AtomicBoolean(false);
+
+    // Ulepszona obsługa wizualizacji z lepszym throttling
+    //private final AtomicBoolean visualizationUpdateInProgress = new AtomicBoolean(false);
+    private final AtomicLong lastVisualizationUpdate = new AtomicLong(0);
+    private static final long VISUALIZATION_UPDATE_INTERVAL = 16; // ~60 FPS
+
 
     public PlayerController(MainFrame mainFrame) {
         this.mainFrame = mainFrame;
@@ -45,8 +58,8 @@ public class PlayerController {
         mainFrame.getControlPanel().addLoopCheckboxListener(e -> toggleLoop());
         mainFrame.getControlPanel().addVolumeSliderListener(this::changeVolume);
 
-        // Inicjalizuj i przypisz ChangeListener do zmiennej
-        progressBarChangeListener = this::seekSong;
+        // Ulepszona obsługa paska postępu
+        progressBarChangeListener = this::handleProgressBarChange;
         mainFrame.getControlPanel().addProgressBarListener(progressBarChangeListener);
     }
 
@@ -68,80 +81,81 @@ public class PlayerController {
                 currentSAPFile = selectedFile;
                 sapReader = new SAPFileReader(currentSAPFile);
                 playerEngine = new SAPPlayerEngine(sapReader.getASAP(), sapReader.getInfo());
-                currentSongIndex = sapReader.getDefaultSong();
+                currentSongIndex.set(sapReader.getDefaultSong());
 
+                // Ulepszone listener'y
                 playerEngine.setPlaybackListener(new SAPPlayerEngine.PlaybackListener() {
-                    // I w metodzie onTimeUpdate, upewnij się, że aktualizujesz lastKnownSliderValue.
-// (Wartość secondsPlayed z onTimeUpdate to jest to samo, co ustawiasz w ProgressBarValue)
                     @Override
                     public void onTimeUpdate(int secondsPlayed, int totalDuration) {
+                        lastEngineTimeUpdate.set(secondsPlayed);
+
                         SwingUtilities.invokeLater(() -> {
-                            mainFrame.getInfoPanel().setTime(secondsPlayed);
-                            if (totalDuration > 0) {
-                                mainFrame.getControlPanel().setProgressBarMaximum(totalDuration);
-                                mainFrame.getControlPanel().setProgressBarValue(secondsPlayed);
-                                lastKnownSliderValue = secondsPlayed; // KLUCZOWA ZMIANA
-                            } else {
-                                mainFrame.getControlPanel().setProgressBarMaximum(0);
-                                mainFrame.getControlPanel().setProgressBarValue(0);
-                                lastKnownSliderValue = 0; // KLUCZOWA ZMIANA
+                            // Aktualizuj tylko jeśli użytkownik nie przeciąga paska
+                            if (!isUserDragging.get()) {
+                                mainFrame.getInfoPanel().setTime(secondsPlayed);
+                                if (totalDuration > 0) {
+                                    mainFrame.getControlPanel().setProgressBarMaximum(totalDuration);
+                                    mainFrame.getControlPanel().setProgressBarValue(secondsPlayed);
+                                } else {
+                                    mainFrame.getControlPanel().setProgressBarMaximum(0);
+                                    mainFrame.getControlPanel().setProgressBarValue(0);
+                                }
                             }
                         });
                     }
 
-                    // Również w onSongEnd i stopSong:
                     @Override
                     public void onSongEnd() {
                         SwingUtilities.invokeLater(() -> {
                             mainFrame.getInfoPanel().setTime(0);
-                            mainFrame.getControlPanel().setProgressBarValue(0);
-                            lastKnownSliderValue = 0; // KLUCZOWA ZMIANA
-                            // ... reszta
+                            if (!isUserDragging.get()) {
+                                mainFrame.getControlPanel().setProgressBarValue(0);
+                            }
+                            // Nie zmieniamy stanu przycisków tutaj, bo może być loop
                         });
                     }
 
                     @Override
                     public void onPlaybackError(String message) {
                         showError("Błąd odtwarzania: " + message);
-                        SwingUtilities.invokeLater(() -> mainFrame.getControlPanel().updateButtonStates(true, false, false));
+                        SwingUtilities.invokeLater(() ->
+                                mainFrame.getControlPanel().updateButtonStates(true, false, false));
                     }
 
                     @Override
                     public void onPlaybackStarted() {
-                        SwingUtilities.invokeLater(() -> mainFrame.getControlPanel().updateButtonStates(true, true, false));
+                        SwingUtilities.invokeLater(() ->
+                                mainFrame.getControlPanel().updateButtonStates(true, true, false));
                     }
                 });
 
+                // Ulepszona obsługa wizualizacji z debouncing
                 playerEngine.setAudioDataListener(new SAPPlayerEngine.AudioDataListener() {
                     @Override
                     public void onAudioData(byte[] buffer) {
-                        SwingUtilities.invokeLater(() -> {
-                            if (playerEngine.getAudioChannels() == 1) {
-                                mainFrame.getVisualizerLeft().setVisible(true);
-                                mainFrame.getVisualizerRight().setVisible(false);
-                                mainFrame.getVisualizerLeft().updateAudioData(buffer);
-                            } else { // Stereo
-                                mainFrame.getVisualizerLeft().setVisible(true);
-                                mainFrame.getVisualizerRight().setVisible(true);
-                                byte[] left = new byte[buffer.length / 2];
-                                byte[] right = new byte[buffer.length / 2];
-                                for (int i = 0, j = 0; i < buffer.length; i += 4, j += 2) {
-                                    left[j] = buffer[i];
-                                    left[j + 1] = buffer[i + 1];
-                                    right[j] = buffer[i + 2];
-                                    right[j + 1] = buffer[i + 3];
-                                }
-                                mainFrame.getVisualizerLeft().updateAudioData(left);
-                                mainFrame.getVisualizerRight().updateAudioData(right);
+                        // Lepsze throttling - nie aktualizuj wizualizacji zbyt często
+                        long currentTime = System.currentTimeMillis();
+                        if (currentTime - lastVisualizationUpdate.get() >= VISUALIZATION_UPDATE_INTERVAL) {
+                            if (visualizationUpdateInProgress.compareAndSet(false, true)) {
+                                lastVisualizationUpdate.set(currentTime);
+
+                                // Wykonaj aktualizację wizualizacji w EDT bez blokowania
+                                SwingUtilities.invokeLater(() -> {
+                                    try {
+                                        updateVisualization(buffer);
+                                    } finally {
+                                        visualizationUpdateInProgress.set(false);
+                                    }
+                                });
                             }
-                        });
+                        }
                     }
                 });
 
                 updateFileInfo();
                 loadScreenshotForSAP(currentSAPFile);
-
                 mainFrame.getControlPanel().updateButtonStates(true, false, false);
+
             } catch (Exception ex) {
                 showError("Błąd podczas wczytywania pliku: " + ex.getMessage());
                 ex.printStackTrace();
@@ -150,10 +164,47 @@ public class PlayerController {
         }
     }
 
+    private void updateVisualization(byte[] buffer) {
+        if (playerEngine != null && buffer != null && buffer.length > 0) {
+            int channels = playerEngine.getAudioChannels();
+
+            if (channels == 1) {
+                // Mono - użyj tylko lewego wizualizatora
+                mainFrame.getVisualizerLeft().setVisible(true);
+                mainFrame.getVisualizerRight().setVisible(false);
+                mainFrame.getVisualizerLeft().updateAudioData(buffer);
+            } else if (channels == 2) {
+                // Stereo - rozdziel kanały
+                mainFrame.getVisualizerLeft().setVisible(true);
+                mainFrame.getVisualizerRight().setVisible(true);
+
+                // Sprawdź czy buffer ma wystarczającą długość
+                if (buffer.length >= 4) {
+                    int samplesPerChannel = buffer.length / 4; // 2 kanały * 2 bajty na próbkę
+                    byte[] leftChannel = new byte[samplesPerChannel * 2];
+                    byte[] rightChannel = new byte[samplesPerChannel * 2];
+
+                    // Poprawione rozdzielanie kanałów (interleaved stereo)
+                    for (int i = 0, left = 0, right = 0; i < buffer.length - 3; i += 4) {
+                        // Lewy kanał (próbka 16-bit little-endian)
+                        leftChannel[left++] = buffer[i];
+                        leftChannel[left++] = buffer[i + 1];
+                        // Prawy kanał (próbka 16-bit little-endian)
+                        rightChannel[right++] = buffer[i + 2];
+                        rightChannel[right++] = buffer[i + 3];
+                    }
+
+                    mainFrame.getVisualizerLeft().updateAudioData(leftChannel);
+                    mainFrame.getVisualizerRight().updateAudioData(rightChannel);
+                }
+            }
+        }
+    }
+
     private void playCurrentSong() {
         if (playerEngine != null && !playerEngine.isPlaying()) {
             try {
-                playerEngine.play(currentSongIndex);
+                playerEngine.play(currentSongIndex.get());
                 mainFrame.getControlPanel().updateButtonStates(true, true, false);
             } catch (Exception ex) {
                 showError("Błąd odtwarzania: " + ex.getMessage());
@@ -177,10 +228,7 @@ public class PlayerController {
             playerEngine.stop();
             mainFrame.getControlPanel().updateButtonStates(true, false, false);
             mainFrame.getInfoPanel().setTime(0);
-            // Również tutaj reset paska musi być obsługiwany z usunięciem/dodaniem listenera
-            mainFrame.getControlPanel().removeProgressBarListener(progressBarChangeListener);
             mainFrame.getControlPanel().setProgressBarValue(0);
-            mainFrame.getControlPanel().addProgressBarListener(progressBarChangeListener);
             mainFrame.getVisualizerLeft().clear();
             mainFrame.getVisualizerRight().clear();
         }
@@ -188,12 +236,14 @@ public class PlayerController {
 
     private void playPreviousSong() {
         if (playerEngine != null && sapReader != null) {
-            currentSongIndex--;
-            if (currentSongIndex < 0) {
-                currentSongIndex = sapReader.getSongsCount() - 1;
+            int newIndex = currentSongIndex.get() - 1;
+            if (newIndex < 0) {
+                newIndex = sapReader.getSongsCount() - 1;
             }
+            currentSongIndex.set(newIndex);
+
             try {
-                playerEngine.play(currentSongIndex);
+                playerEngine.play(newIndex);
                 updateFileInfo();
             } catch (Exception ex) {
                 showError("Błąd odtwarzania poprzedniego utworu: " + ex.getMessage());
@@ -204,12 +254,14 @@ public class PlayerController {
 
     private void playNextSong() {
         if (playerEngine != null && sapReader != null) {
-            currentSongIndex++;
-            if (currentSongIndex >= sapReader.getSongsCount()) {
-                currentSongIndex = 0;
+            int newIndex = currentSongIndex.get() + 1;
+            if (newIndex >= sapReader.getSongsCount()) {
+                newIndex = 0;
             }
+            currentSongIndex.set(newIndex);
+
             try {
-                playerEngine.play(currentSongIndex);
+                playerEngine.play(newIndex);
                 updateFileInfo();
             } catch (Exception ex) {
                 showError("Błąd odtwarzania następnego utworu: " + ex.getMessage());
@@ -235,48 +287,48 @@ public class PlayerController {
         }
     }
 
-    // Zmieniona metoda seekSong (ChangeEvent e)
-    private void seekSong(ChangeEvent e) {
+    /**
+     * Ulepszona obsługa paska postępu
+     */
+    private void handleProgressBarChange(ChangeEvent e) {
         JSlider source = (JSlider) e.getSource();
 
-        // Sprawdzamy, czy zmiana wartości jest spowodowana aktywnym przeciąganiem przez użytkownika
         if (source.getValueIsAdjusting()) {
-            // Użytkownik przeciąga suwak, nie robimy nic jeszcze, tylko aktualizujemy lastKnownSliderValue
-            // (opcjonalnie, jeśli chcesz wyświetlać czas podczas przewijania)
-            lastKnownSliderValue = source.getValue();
-            return;
-        }
+            // Użytkownik przeciąga suwak
+            isUserDragging.set(true);
 
-        // Jeśli doszliśmy tutaj, to użytkownik puścił suwak LUB wartość została zmieniona programowo.
-        // Musimy odróżnić te dwa przypadki.
-        // Jeżeli wartość suwaka JEST RÓŻNA od ostatniej znanej nam programowej wartości,
-        // to oznacza, że użytkownik ją zmienił.
-        if (source.getValue() != lastKnownSliderValue) {
-            // To jest zmiana zainicjowana przez użytkownika (po puszczeniu suwaka)
-            int seconds = source.getValue();
-            if (playerEngine != null) {
-                System.out.println("Użytkownik przewinął do: " + seconds + "s");
-                playerEngine.seek(seconds);
-                mainFrame.getInfoPanel().setTime(seconds);
-            }
-            lastKnownSliderValue = seconds; // Aktualizujemy ostatnią znaną wartość
+            // Opcjonalnie: pokaż preview czasu podczas przeciągania
+            int previewTime = source.getValue();
+            mainFrame.getInfoPanel().setTime(previewTime);
+
         } else {
-            // Jeśli wartość jest taka sama jak lastKnownSliderValue, to znaczy, że to była zmiana programowa
-            // i powinniśmy ją zignorować w kontekście wywoływania seek().
-            // Możemy tu dodać logowanie, jeśli chcemy to potwierdzić.
-            // System.out.println("DEBUG: Zmiana paska postępu zignorowana (programowa lub bez faktycznej zmiany wartości).");
+            // Użytkownik puścił suwak
+            isUserDragging.set(false);
+
+            int targetSeconds = source.getValue();
+            int lastKnownTime = lastEngineTimeUpdate.get();
+
+            // Sprawdź czy to rzeczywiście zmiana zainicjowana przez użytkownika
+            if (Math.abs(targetSeconds - lastKnownTime) > 1) { // Tolerancja 1 sekunda
+                if (playerEngine != null) {
+                    System.out.println("Użytkownik przewinął do: " + targetSeconds + "s");
+                    playerEngine.seek(targetSeconds);
+                }
+            }
         }
     }
+
     private void updateFileInfo() {
         if (sapReader != null) {
+            int songIndex = currentSongIndex.get();
             mainFrame.getInfoPanel().setFilePath(currentSAPFile.getName());
             mainFrame.getInfoPanel().setTitle(sapReader.getTitle());
             mainFrame.getInfoPanel().setAuthor(sapReader.getAuthor());
             mainFrame.getInfoPanel().setDate(sapReader.getDate());
-            mainFrame.getInfoPanel().setSongInfo(currentSongIndex, sapReader.getSongsCount());
+            mainFrame.getInfoPanel().setSongInfo(songIndex, sapReader.getSongsCount());
             mainFrame.getInfoPanel().setFormat(String.format("%d kanał(y), %d Hz, %d-bit",
                     playerEngine.getAudioChannels(),
-                    (int) 44100,
+                    44100,
                     16
             ));
         } else {

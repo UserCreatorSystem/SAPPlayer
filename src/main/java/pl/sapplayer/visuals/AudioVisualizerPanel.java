@@ -5,10 +5,12 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class AudioVisualizerPanel extends JPanel {
-    private byte[] audioData; // Surowe dane audio (interleaved stereo lub mono)
-    private double gain = 1.0; // Wzmocnienie wizualizacji (domyślnie 1.0)
+    private volatile byte[] audioData; // Surowe dane audio (interleaved stereo lub mono)
+    private double gain = 2.0; // Zwiększone wzmocnienie wizualizacji
     private Color waveformColor = new Color(0, 255, 100); // Kolor fali (zielony)
     private Color backgroundColor = Color.BLACK; // Kolor tła
     private boolean showCenterLine = true;
@@ -16,9 +18,15 @@ public class AudioVisualizerPanel extends JPanel {
     private BufferedImage bufferImage; // Buforowany obraz do rysowania
     private Graphics2D bufferGraphics; // Kontekst graficzny dla buforowanego obrazu
 
+    // Throttling dla lepszej wydajności
+    private final AtomicBoolean updatePending = new AtomicBoolean(false);
+    private final AtomicLong lastUpdateTime = new AtomicLong(0);
+    private static final long MIN_UPDATE_INTERVAL = 33; // ~30 FPS (33ms)
+
     public AudioVisualizerPanel() {
         setBackground(backgroundColor);
-        // Nie ma już wewnętrznego timera! Repaint będzie wywoływany z zewnątrz.
+        setDoubleBuffered(true); // Włącz podwójne buforowanie
+        setPreferredSize(new Dimension(400, 100)); // Domyślny rozmiar
     }
 
     /**
@@ -26,33 +34,64 @@ public class AudioVisualizerPanel extends JPanel {
      * @param gain wartość wzmocnienia (np. 1.0 dla domyślnej, >1.0 dla zwiększenia)
      */
     public void setGain(double gain) {
-        this.gain = Math.max(0.1, Math.min(5.0, gain)); // Ograniczenie wartości gain
-        SwingUtilities.invokeLater(this::repaint); // Odśwież widok po zmianie
+        this.gain = Math.max(0.1, Math.min(10.0, gain)); // Zwiększony zakres
+        requestRepaint();
     }
 
     /**
-     * Aktualizuje dane audio do wizualizacji.
-     * Ta metoda powinna być wywoływana z wątku odtwarzania,
-     * ale repaint() musi być w EDT.
+     * Aktualizuje dane audio do wizualizacji z throttling.
      * @param data tablica bajtów zawierająca dane audio (16-bit, Little-Endian)
      */
     public void updateAudioData(byte[] data) {
+        if (data == null || data.length < 4) {
+            this.audioData = null;
+            requestRepaint();
+            return;
+        }
+
         // Skopiuj dane, aby uniknąć problemów z modyfikacją oryginalnego bufora
-        this.audioData = (data != null) ? Arrays.copyOf(data, data.length) : null;
-        SwingUtilities.invokeLater(this::repaint); // Zawsze wywołuj repaint w EDT
+        this.audioData = Arrays.copyOf(data, data.length);
+
+        // Throttled repaint dla lepszej wydajności
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastUpdateTime.get() >= MIN_UPDATE_INTERVAL) {
+            if (updatePending.compareAndSet(false, true)) {
+                lastUpdateTime.set(currentTime);
+                SwingUtilities.invokeLater(() -> {
+                    updatePending.set(false);
+                    repaint();
+                });
+            }
+        }
+    }
+
+    private void requestRepaint() {
+        if (updatePending.compareAndSet(false, true)) {
+            SwingUtilities.invokeLater(() -> {
+                updatePending.set(false);
+                repaint();
+            });
+        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
-        super.paintComponent(g); // Rysuje tło panelu (aktualnie ustawione na backgroundColor)
+        super.paintComponent(g);
 
         int width = getWidth();
         int height = getHeight();
 
+        if (width <= 0 || height <= 0) return;
+
         // Sprawdź, czy bufor obrazu musi zostać utworzony/zmieniony
         if (bufferImage == null || bufferImage.getWidth() != width || bufferImage.getHeight() != height) {
-            bufferImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            if (bufferGraphics != null) {
+                bufferGraphics.dispose();
+            }
+            bufferImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
             bufferGraphics = bufferImage.createGraphics();
+            bufferGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            bufferGraphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         }
 
         // Wyczyść buforowany obraz
@@ -60,100 +99,133 @@ public class AudioVisualizerPanel extends JPanel {
         bufferGraphics.fillRect(0, 0, width, height);
 
         // Sprawdź, czy są dane audio do rysowania
-        if (audioData == null || audioData.length < 2) {
-            drawNoSignalMessage(bufferGraphics);
+        if (audioData == null || audioData.length < 4) {
+            drawNoSignalMessage(bufferGraphics, width, height);
         } else {
-            // Ustawienia dla rysowania
-            bufferGraphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
             // Rysuj linię środkową
             if (showCenterLine) {
                 int centerY = height / 2;
-                bufferGraphics.setColor(new Color(50, 50, 50)); // Ciemniejszy szary
+                bufferGraphics.setColor(new Color(50, 50, 50));
                 bufferGraphics.drawLine(0, centerY, width, centerY);
             }
 
             // Rysuj falę audio
             bufferGraphics.setColor(waveformColor);
-            drawWaveform(bufferGraphics);
+            drawWaveform(bufferGraphics, width, height);
         }
 
         // Rysuj buforowany obraz na panelu
         g.drawImage(bufferImage, 0, 0, null);
     }
 
-    private void drawWaveform(Graphics2D g2) {
-        int width = getWidth();
-        int height = getHeight();
+    private void drawWaveform(Graphics2D g2, int width, int height) {
         int centerY = height / 2;
 
-        // Określ, ile próbek będziemy rysować na szerokość panelu.
-        // Chcemy, aby fala była widoczna, więc nie rysujemy każdej próbki,
-        // jeśli bufor jest bardzo duży, a panel wąski.
-        // 16-bitowe próbki, więc 2 bajty na próbkę.
-        int numSamples = audioData.length / 2; // Całkowita liczba 16-bitowych próbek
-        int pointsToDraw = Math.min(width, numSamples); // Rysujemy co najwyżej tyle punktów, ile pikseli szerokości
+        // Poprawiona konwersja danych audio
+        int numSamples = audioData.length / 2; // 16-bit próbki
+        if (numSamples == 0) return;
 
-        if (pointsToDraw == 0) return;
+        // Określ ile próbek na piksel
+        double samplesPerPixel = (double) numSamples / width;
 
-        // Oblicz współczynnik skalowania, aby dopasować dane audio do szerokości panelu
-        double sampleStep = (double) numSamples / pointsToDraw;
+        // Użyj Stroke dla lepszego renderowania
+        g2.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
-        int prevX = 0;
-        int prevY = centerY;
+        int[] xPoints = new int[width];
+        int[] yPoints = new int[width];
 
-        for (int i = 0; i < pointsToDraw; i++) {
-            // Indeks próbki w oryginalnym buforze (float, bo może być ułamkowy)
-            int sampleIndex = (int) (i * sampleStep);
-            int byteIndex = sampleIndex * 2; // Bajtowy indeks dla 16-bitowych próbek
+        // Generuj punkty dla całej szerokości
+        for (int x = 0; x < width; x++) {
+            double samplePos = x * samplesPerPixel;
+            int sampleIndex = (int) samplePos;
 
-            if (byteIndex + 1 >= audioData.length) break; // Zabezpieczenie przed wyjściem poza zakres
-
-            // Odczytanie 16-bitowej próbki (Little-Endian)
-            // (MSB << 8) | (LSB & 0xFF)
-            int sample = (audioData[byteIndex + 1] << 8) | (audioData[byteIndex] & 0xFF);
-
-            // Skalowanie próbki do wysokości panelu
-            // Wartość 32768.0 to maksymalna wartość dla 16-bit signed int (-32768 do 32767)
-            // Wynik skalowania powinien być w zakresie od -centerY do +centerY, a następnie przesunięty
-            double scaledSample = (double) sample * gain / 32768.0; // -1.0 do 1.0 (z gainem)
-            int y = centerY - (int)(scaledSample * centerY); // Odwrócony Y: wyższe wartości idą w górę
-
-            int x = i; // Rysujemy każdy punkt na osobnym pikselu X
-
-            if (i > 0) {
-                g2.drawLine(prevX, prevY, x, y);
+            // Zabezpieczenie przed wyjściem poza zakres
+            if (sampleIndex * 2 + 1 >= audioData.length) {
+                sampleIndex = (audioData.length / 2) - 1;
             }
 
-            prevX = x;
-            prevY = y;
+            int byteIndex = sampleIndex * 2;
+
+            // Poprawiona konwersja Little-Endian 16-bit signed
+            int sample = (audioData[byteIndex + 1] << 8) | (audioData[byteIndex] & 0xFF);
+
+            // Konwersja do signed int (jeśli potrzebne)
+            if (sample > 32767) {
+                sample -= 65536;
+            }
+
+            // Skalowanie z wzmocnieniem
+            double normalizedSample = (double) sample / 32768.0 * gain;
+
+            // Ograniczenie zakresu
+            normalizedSample = Math.max(-1.0, Math.min(1.0, normalizedSample));
+
+            // Konwersja do współrzędnych ekranu
+            int y = centerY - (int) (normalizedSample * (height / 2 - 2));
+
+            xPoints[x] = x;
+            yPoints[x] = y;
+        }
+
+        // Rysuj linię łamaną przez wszystkie punkty
+        if (width > 1) {
+            g2.drawPolyline(xPoints, yPoints, width);
+        }
+
+        // Dodatkowe podświetlenie dla wyższych amplitud
+        g2.setColor(new Color(waveformColor.getRed(), waveformColor.getGreen(), waveformColor.getBlue(), 100));
+        g2.setStroke(new BasicStroke(2.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+
+        // Rysuj tylko punkty o wysokiej amplitudzie
+        for (int x = 0; x < width; x++) {
+            double samplePos = x * samplesPerPixel;
+            int sampleIndex = (int) samplePos;
+
+            if (sampleIndex * 2 + 1 >= audioData.length) continue;
+
+            int byteIndex = sampleIndex * 2;
+            int sample = (audioData[byteIndex + 1] << 8) | (audioData[byteIndex] & 0xFF);
+
+            if (sample > 32767) sample -= 65536;
+
+            double normalizedSample = Math.abs((double) sample / 32768.0 * gain);
+
+            // Rysuj dodatkowe podświetlenie dla amplitud > 50%
+            if (normalizedSample > 0.5) {
+                int y = yPoints[x];
+                g2.drawLine(x, y - 1, x, y + 1);
+            }
         }
     }
 
-    private void drawNoSignalMessage(Graphics2D g2) {
-        g2.setColor(new Color(100, 100, 100)); // Szary
+    private void drawNoSignalMessage(Graphics2D g2, int width, int height) {
+        g2.setColor(new Color(100, 100, 100));
         String msg = "Brak sygnału audio";
         FontMetrics fm = g2.getFontMetrics();
-        int x = (getWidth() - fm.stringWidth(msg)) / 2;
-        int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
+        int x = (width - fm.stringWidth(msg)) / 2;
+        int y = (height - fm.getHeight()) / 2 + fm.getAscent();
         g2.drawString(msg, x, y);
     }
 
-    // Dodatkowe settery dla kolorów i linii, jeśli chcesz je konfigurować
+    // Dodatkowe settery dla kolorów i linii
     public void setWaveformColor(Color color) {
         this.waveformColor = color;
-        SwingUtilities.invokeLater(this::repaint);
+        requestRepaint();
     }
 
     public void setBackgroundColor(Color color) {
         this.backgroundColor = color;
-        setBackground(color); // Zaktualizuj tło JPanelu
-        SwingUtilities.invokeLater(this::repaint);
+        setBackground(color);
+        requestRepaint();
     }
 
     public void setShowCenterLine(boolean show) {
         this.showCenterLine = show;
-        SwingUtilities.invokeLater(this::repaint);
+        requestRepaint();
+    }
+
+    public double getGain() {
+        return gain;
     }
 
     /**
@@ -161,6 +233,20 @@ public class AudioVisualizerPanel extends JPanel {
      */
     public void clear() {
         this.audioData = null;
-        SwingUtilities.invokeLater(this::repaint);
+        requestRepaint();
+    }
+
+    @Override
+    public void removeNotify() {
+        super.removeNotify();
+        // Cleanup przy usuwaniu komponentu
+        if (bufferGraphics != null) {
+            bufferGraphics.dispose();
+            bufferGraphics = null;
+        }
+        if (bufferImage != null) {
+            bufferImage.flush();
+            bufferImage = null;
+        }
     }
 }
