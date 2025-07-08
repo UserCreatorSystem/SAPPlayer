@@ -29,7 +29,16 @@ public class MainFrame extends JFrame {
 
         // --- GÓRNY PANEL: Wizualizatory ---
         visualizerLeft = new AudioVisualizerPanel();
+        // W MainFrame lub gdzie masz kontrolę nad UI
+        visualizerLeft.setVisualizationMode(AudioVisualizerPanel.VisualizationMode.SPECTRUM);
+        visualizerLeft.setGain(4.0);
+        //visualizerLeft.setShowPeaks(true);
+
         visualizerRight = new AudioVisualizerPanel();
+        visualizerRight.setVisualizationMode(AudioVisualizerPanel.VisualizationMode.SPECTRUM);
+        visualizerRight.setGain(4.0);
+        //visualizerRight.setShowPeaks(true);
+
         visualizerLeft.setPreferredSize(new Dimension(0, 100)); // Wysokość 100px
         visualizerRight.setPreferredSize(new Dimension(0, 100)); // Wysokość 100px
 

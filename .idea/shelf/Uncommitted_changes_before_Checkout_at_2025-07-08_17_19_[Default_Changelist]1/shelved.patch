@@ -1,0 +1,27 @@
+Index: src/main/java/pl/sapplayer/ui/MainFrame.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>// pl.saplayer.ui.MainFrame.java\r\npackage pl.sapplayer.ui;\r\n\r\nimport pl.sapplayer.visuals.AudioVisualizerPanel; // Ważna zmiana pakietu\r\nimport javax.swing.*;\r\nimport java.awt.*;\r\n\r\npublic class MainFrame extends JFrame {\r\n\r\n    private AudioVisualizerPanel visualizerLeft;\r\n    private AudioVisualizerPanel visualizerRight;\r\n    private InfoPanel infoPanel;\r\n    private ImagePanel imagePanel;\r\n    private ControlPanel controlPanel;\r\n\r\n    public MainFrame() {\r\n        setTitle(\"Atari SAP Player\");\r\n        // Zwiększony rozmiar, aby pomieścić nowe kontrolki\r\n        setSize(550, 750); // Dostosuj w miarę potrzeby\r\n        setMinimumSize(new Dimension(700, 650));\r\n        setDefaultCloseOperation(EXIT_ON_CLOSE);\r\n        setLocationRelativeTo(null);\r\n\r\n        initUI();\r\n    }\r\n\r\n    private void initUI() {\r\n        setLayout(new BorderLayout(10, 10)); // Dodajemy odstępy\r\n\r\n        // --- GÓRNY PANEL: Wizualizatory ---\r\n        visualizerLeft = new AudioVisualizerPanel();\r\n        visualizerRight = new AudioVisualizerPanel();\r\n        visualizerLeft.setPreferredSize(new Dimension(0, 100)); // Wysokość 100px\r\n        visualizerRight.setPreferredSize(new Dimension(0, 100)); // Wysokość 100px\r\n\r\n        JPanel visualizersContainer = new JPanel(new GridLayout(2, 1, 5, 5));\r\n        visualizersContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));\r\n        visualizersContainer.add(visualizerLeft);\r\n        visualizersContainer.add(visualizerRight);\r\n        add(visualizersContainer, BorderLayout.NORTH);\r\n\r\n        // --- CENTRALNY PANEL: Informacje i Grafika ---\r\n        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));\r\n        centerPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));\r\n\r\n        infoPanel = new InfoPanel();\r\n        imagePanel = new ImagePanel();\r\n\r\n        centerPanel.add(imagePanel, BorderLayout.CENTER);\r\n        centerPanel.add(infoPanel, BorderLayout.SOUTH);\r\n\r\n        add(centerPanel, BorderLayout.CENTER);\r\n\r\n        // --- DOLNY PANEL: Przyciski sterujące i suwaki ---\r\n        controlPanel = new ControlPanel();\r\n        controlPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));\r\n        add(controlPanel, BorderLayout.SOUTH);\r\n\r\n        //visualizerRight.setVisible(false); // Domyślnie ukryj prawy wizualizator (dla mono)\r\n    }\r\n\r\n    // --- Metody dostępu ---\r\n    public AudioVisualizerPanel getVisualizerLeft() { return visualizerLeft; }\r\n    public AudioVisualizerPanel getVisualizerRight() { return visualizerRight; }\r\n    public InfoPanel getInfoPanel() { return infoPanel; }\r\n    public ImagePanel getImagePanel() { return imagePanel; }\r\n    public ControlPanel getControlPanel() { return controlPanel; }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/pl/sapplayer/ui/MainFrame.java b/src/main/java/pl/sapplayer/ui/MainFrame.java
+--- a/src/main/java/pl/sapplayer/ui/MainFrame.java	(revision 5c5953f4aeb593a8cbf9c8ab0f66f94e42bab6f9)
++++ b/src/main/java/pl/sapplayer/ui/MainFrame.java	(date 1751987511255)
+@@ -29,7 +29,16 @@
+ 
+         // --- GÓRNY PANEL: Wizualizatory ---
+         visualizerLeft = new AudioVisualizerPanel();
++        // W MainFrame lub gdzie masz kontrolę nad UI
++        visualizerLeft.setVisualizationMode(AudioVisualizerPanel.VisualizationMode.SPECTRUM);
++        visualizerLeft.setGain(4.0);
++        //visualizerLeft.setShowPeaks(true);
++
+         visualizerRight = new AudioVisualizerPanel();
++        visualizerRight.setVisualizationMode(AudioVisualizerPanel.VisualizationMode.SPECTRUM);
++        visualizerRight.setGain(4.0);
++        //visualizerRight.setShowPeaks(true);
++
+         visualizerLeft.setPreferredSize(new Dimension(0, 100)); // Wysokość 100px
+         visualizerRight.setPreferredSize(new Dimension(0, 100)); // Wysokość 100px
+ 
