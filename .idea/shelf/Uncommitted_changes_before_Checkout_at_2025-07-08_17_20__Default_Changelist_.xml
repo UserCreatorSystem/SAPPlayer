@@ -1,0 +1,50 @@
+<changelist name="Uncommitted_changes_before_Checkout_at_2025-07-08_17_20_[Default_Changelist]" date="1751988034124" recycled="true" deleted="true">
+  <option name="PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025-07-08_17_20_[Default_Changelist]/shelved.patch" />
+  <option name="DESCRIPTION" value="Uncommitted changes before Checkout at 2025-07-08 17:20 [Default Changelist]" />
+  <binary>
+    <option name="BEFORE_PATH" value=".gradle/4.10/fileContent/fileContent.lock" />
+    <option name="AFTER_PATH" value=".gradle/4.10/fileContent/fileContent.lock" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025-07-08_17_20_[Default_Changelist]/fileContent.lock" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value=".gradle/4.10/fileHashes/fileHashes.bin" />
+    <option name="AFTER_PATH" value=".gradle/4.10/fileHashes/fileHashes.bin" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025-07-08_17_20_[Default_Changelist]/fileHashes.bin" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value=".gradle/4.10/javaCompile/javaCompile.lock" />
+    <option name="AFTER_PATH" value=".gradle/4.10/javaCompile/javaCompile.lock" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025-07-08_17_20_[Default_Changelist]/javaCompile.lock" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value="build/classes/java/main/pl/sapplayer/PlayerApp.class" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value=".gradle/buildOutputCleanup/buildOutputCleanup.lock" />
+    <option name="AFTER_PATH" value=".gradle/buildOutputCleanup/buildOutputCleanup.lock" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025-07-08_17_20_[Default_Changelist]/buildOutputCleanup.lock" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value=".gradle/4.10/taskHistory/taskHistory.lock" />
+    <option name="AFTER_PATH" value=".gradle/4.10/taskHistory/taskHistory.lock" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025-07-08_17_20_[Default_Changelist]/taskHistory.lock" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value=".gradle/4.10/fileHashes/fileHashes.lock" />
+    <option name="AFTER_PATH" value=".gradle/4.10/fileHashes/fileHashes.lock" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025-07-08_17_20_[Default_Changelist]/fileHashes.lock" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value=".gradle/4.10/taskHistory/taskHistory.bin" />
+    <option name="AFTER_PATH" value=".gradle/4.10/taskHistory/taskHistory.bin" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025-07-08_17_20_[Default_Changelist]/taskHistory.bin" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value="build/classes/java/main/pl/sapplayer/ui/MainFrame.class" />
+  </binary>
+  <binary>
+    <option name="BEFORE_PATH" value=".gradle/4.10/javaCompile/classAnalysis.bin" />
+    <option name="AFTER_PATH" value=".gradle/4.10/javaCompile/classAnalysis.bin" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Checkout_at_2025-07-08_17_20_[Default_Changelist]/classAnalysis.bin" />
+  </binary>
+</changelist>
