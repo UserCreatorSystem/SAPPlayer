@@ -36,6 +36,9 @@ public class SAPPlayerEngine {
     private static final int BITS_PER_SAMPLE = 16;
     private static final int BUFFER_SIZE = 2048;
 
+    // DECLARE THE PlaybackListener HERE
+    private volatile PlaybackListener listener; // Add this line
+
     public interface PlaybackListener {
         void onTimeUpdate(int secondsPlayed, int totalDuration);
         void onSongEnd();
@@ -43,10 +46,20 @@ public class SAPPlayerEngine {
         void onPlaybackStarted();
     }
 
-    private volatile PlaybackListener listener;
-
+    // Opcjonalnie - rozszerz interfejs AudioDataListener:
     public interface AudioDataListener {
         void onAudioData(byte[] buffer);
+
+        // Nowa metoda - opcjonalna
+        default void onAudioData(byte[] buffer, int length) {
+            if (length == buffer.length) {
+                onAudioData(buffer);
+            } else {
+                byte[] trimmed = new byte[length];
+                System.arraycopy(buffer, 0, trimmed, 0, length);
+                onAudioData(trimmed);
+            }
+        }
     }
 
     private volatile AudioDataListener audioDataListener;
@@ -208,17 +221,19 @@ public class SAPPlayerEngine {
         }
     }
 
-    private void updateVisualization(byte[] buffer, int bytesGenerated) {
-        if (audioDataListener != null) {
-            // Skopiuj dane dla wizualizacji w thread-safe sposób
-            synchronized (visualizationLock) {
-                visualizationBuffer = Arrays.copyOf(buffer, bytesGenerated);
-            }
 
-            // Wyślij dane do wizualizacji (może być wywołane z innego wątku)
-            audioDataListener.onAudioData(visualizationBuffer);
+
+    // Alternatywnie - jeszcze bardziej optymalna wersja:
+    private void updateVisualization(byte[] buffer, int bytesGenerated) {
+        if (audioDataListener != null && buffer != null && bytesGenerated > 0) {
+            // Przekaż oryginalny bufor z informacją o długości
+            // (wymaga modyfikacji interfejsu AudioDataListener)
+            audioDataListener.onAudioData(buffer, bytesGenerated);
         }
     }
+
+
+
 
     public void pause() {
         if (playing.get()) {

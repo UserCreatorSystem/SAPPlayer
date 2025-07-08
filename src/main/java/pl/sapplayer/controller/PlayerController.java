@@ -6,6 +6,7 @@ import pl.sapplayer.engine.SAPPlayerEngine;
 import pl.sapplayer.ui.MainFrame;
 import pl.sapplayer.utils.ImageLoader;
 import pl.sapplayer.utils.SAPFileReader;
+import pl.sapplayer.visuals.AudioVisualizerPanel;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -129,25 +130,13 @@ public class PlayerController {
                     }
                 });
 
-                // Ulepszona obsługa wizualizacji z debouncing
+                // Uproszczona obsługa wizualizacji - bez throttling
                 playerEngine.setAudioDataListener(new SAPPlayerEngine.AudioDataListener() {
                     @Override
                     public void onAudioData(byte[] buffer) {
-                        // Lepsze throttling - nie aktualizuj wizualizacji zbyt często
-                        long currentTime = System.currentTimeMillis();
-                        if (currentTime - lastVisualizationUpdate.get() >= VISUALIZATION_UPDATE_INTERVAL) {
-                            if (visualizationUpdateInProgress.compareAndSet(false, true)) {
-                                lastVisualizationUpdate.set(currentTime);
-
-                                // Wykonaj aktualizację wizualizacji w EDT bez blokowania
-                                SwingUtilities.invokeLater(() -> {
-                                    try {
-                                        updateVisualization(buffer);
-                                    } finally {
-                                        visualizationUpdateInProgress.set(false);
-                                    }
-                                });
-                            }
+                        // Bezpośrednie przekazanie danych bez dodatkowego buforowania
+                        if (buffer != null && buffer.length > 0) {
+                            SwingUtilities.invokeLater(() -> updateVisualization(buffer));
                         }
                     }
                 });
@@ -164,41 +153,53 @@ public class PlayerController {
         }
     }
 
+    // Uproszczona metoda updateVisualization:
     private void updateVisualization(byte[] buffer) {
-        if (playerEngine != null && buffer != null && buffer.length > 0) {
-            int channels = playerEngine.getAudioChannels();
+        if (playerEngine == null || buffer == null || buffer.length == 0) {
+            return;
+        }
 
-            if (channels == 1) {
-                // Mono - użyj tylko lewego wizualizatora
-                mainFrame.getVisualizerLeft().setVisible(true);
-                mainFrame.getVisualizerRight().setVisible(false);
-                mainFrame.getVisualizerLeft().updateAudioData(buffer);
-            } else if (channels == 2) {
-                // Stereo - rozdziel kanały
-                mainFrame.getVisualizerLeft().setVisible(true);
-                mainFrame.getVisualizerRight().setVisible(true);
+        int channels = playerEngine.getAudioChannels();
 
-                // Sprawdź czy buffer ma wystarczającą długość
-                if (buffer.length >= 4) {
-                    int samplesPerChannel = buffer.length / 4; // 2 kanały * 2 bajty na próbkę
-                    byte[] leftChannel = new byte[samplesPerChannel * 2];
-                    byte[] rightChannel = new byte[samplesPerChannel * 2];
+        if (channels == 1) {
+            // Mono - tylko lewy wizualizator
+            mainFrame.getVisualizerLeft().setVisible(true);
+            mainFrame.getVisualizerRight().setVisible(false);
+            mainFrame.getVisualizerLeft().updateAudioData(buffer);
 
-                    // Poprawione rozdzielanie kanałów (interleaved stereo)
-                    for (int i = 0, left = 0, right = 0; i < buffer.length - 3; i += 4) {
-                        // Lewy kanał (próbka 16-bit little-endian)
-                        leftChannel[left++] = buffer[i];
-                        leftChannel[left++] = buffer[i + 1];
-                        // Prawy kanał (próbka 16-bit little-endian)
-                        rightChannel[right++] = buffer[i + 2];
-                        rightChannel[right++] = buffer[i + 3];
-                    }
+        } else if (channels == 2) {
+            // Stereo - rozdziel kanały
+            mainFrame.getVisualizerLeft().setVisible(true);
+            mainFrame.getVisualizerRight().setVisible(true);
 
-                    mainFrame.getVisualizerLeft().updateAudioData(leftChannel);
-                    mainFrame.getVisualizerRight().updateAudioData(rightChannel);
+            if (buffer.length >= 4) {
+                // Szybkie rozdzielenie kanałów
+                int samplesPerChannel = buffer.length / 4;
+                byte[] leftChannel = new byte[samplesPerChannel * 2];
+                byte[] rightChannel = new byte[samplesPerChannel * 2];
+
+                for (int i = 0, left = 0, right = 0; i < buffer.length - 3; i += 4) {
+                    leftChannel[left++] = buffer[i];
+                    leftChannel[left++] = buffer[i + 1];
+                    rightChannel[right++] = buffer[i + 2];
+                    rightChannel[right++] = buffer[i + 3];
                 }
+
+                mainFrame.getVisualizerLeft().updateAudioData(leftChannel);
+                mainFrame.getVisualizerRight().updateAudioData(rightChannel);
             }
         }
+    }
+
+    // Opcjonalnie - dodaj metody do przełączania trybu wizualizacji
+    public void setVisualizationMode(AudioVisualizerPanel.VisualizationMode mode) {
+        mainFrame.getVisualizerLeft().setVisualizationMode(mode);
+        mainFrame.getVisualizerRight().setVisualizationMode(mode);
+    }
+
+    public void setVisualizationGain(double gain) {
+        mainFrame.getVisualizerLeft().setGain(gain);
+        mainFrame.getVisualizerRight().setGain(gain);
     }
 
     private void playCurrentSong() {

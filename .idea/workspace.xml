@@ -9,7 +9,35 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b1ab4b06-56ef-45bb-bac3-77e7f9aa8889" name="Default Changelist" comment="Pierwsza działająca wersja. Poprawiony pasek postępu, problemy z wizualiazacją" />
+    <list default="true" id="b1ab4b06-56ef-45bb-bac3-77e7f9aa8889" name="Default Changelist" comment="Pierwsza działająca wersja. Poprawiony pasek postępu, problemy z wizualiazacją">
+      <change beforePath="$PROJECT_DIR$/.gradle/4.10/fileContent/fileContent.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/4.10/fileContent/fileContent.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/4.10/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/4.10/fileHashes/fileHashes.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/4.10/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/4.10/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/4.10/javaCompile/classAnalysis.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/4.10/javaCompile/classAnalysis.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/4.10/javaCompile/javaCompile.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/4.10/javaCompile/javaCompile.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/4.10/taskHistory/taskHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/4.10/taskHistory/taskHistory.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/4.10/taskHistory/taskHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/4.10/taskHistory/taskHistory.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/PlayerApp.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/controller/PlayerController$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/controller/PlayerController$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/controller/PlayerController$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/controller/PlayerController$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/controller/PlayerController.class" beforeDir="false" afterPath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/controller/PlayerController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/engine/SAPPlayerEngine$AudioDataListener.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/engine/SAPPlayerEngine$PlaybackListener.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/engine/SAPPlayerEngine.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/ui/ControlPanel.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/ui/ImagePanel.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/ui/InfoPanel.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/ui/MainFrame.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/utils/ImageLoader.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/utils/SAPFileReader.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/classes/java/main/pl/sapplayer/visuals/AudioVisualizerPanel.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/pl/sapplayer/controller/PlayerController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/pl/sapplayer/controller/PlayerController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/pl/sapplayer/engine/SAPPlayerEngine.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/pl/sapplayer/engine/SAPPlayerEngine.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/pl/sapplayer/ui/MainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/pl/sapplayer/ui/MainFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/pl/sapplayer/visuals/AudioVisualizerPanel.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/pl/sapplayer/visuals/AudioVisualizerPanel.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -219,7 +247,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="0.01" />
+        <entry key="$PROJECT_DIR$" value="0.02" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -245,12 +273,17 @@
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 4
+}]]></component>
   <component name="ProjectFrameBounds">
     <option name="x" value="1732" />
     <option name="y" value="521" />
     <option name="width" value="1803" />
     <option name="height" value="1191" />
   </component>
+  <component name="ProjectId" id="2zYnnVx6hhq8ZmosLOE7bcScxBw" />
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
@@ -309,7 +342,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "0.02",
+    "git-widget-placeholder": "0.03",
     "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings"
   }
 }]]></component>
@@ -367,7 +400,15 @@
       <option name="project" value="LOCAL" />
       <updated>1751911957910</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Pierwsza działająca wersja. Poprawiony pasek postępu, problemy z wizualiazacją">
+      <option name="closed" value="true" />
+      <created>1751912583248</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1751912583248</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TodoView">
@@ -424,7 +465,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="0.02" />
+                        <option value="0.03" />
                       </list>
                     </value>
                   </entry>
